@@ -6,6 +6,7 @@ from xml.etree import ElementTree
 import mujoco
 
 from backend.chains import discover_chains
+from backend.virtual_joints import virtualize_chain
 
 
 JOINT_TYPES = {
@@ -65,12 +66,16 @@ def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
     except (mujoco.FatalError, ValueError) as exc:
         raise ModelLoadError("compile_error", f"MuJoCo could not compile this MJCF: {exc}.") from exc
 
+    chains = discover_chains(model)
+    for chain in chains:
+        chain["virtual_joints"], chain["virtual_warnings"] = virtualize_chain(model, chain, data.qpos)
+
     return LoadedModel(
         filename=filename,
         model_name=root.get("model", "unnamed model"),
         model=model,
         data=data,
-        chains=discover_chains(model),
+        chains=chains,
     )
 
 
