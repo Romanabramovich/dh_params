@@ -85,6 +85,32 @@ function renderSummary(summary) {
       details.append(note);
     }
     item.append(details);
+
+    const assignment = chain.dh_frames;
+    const frameDetails = document.createElement("details");
+    const frameHeading = document.createElement("summary");
+    frameHeading.textContent = `Candidate DH frames (${assignment.frames.length})`;
+    const frameNote = document.createElement("p");
+    frameNote.className = "body-path";
+    frameNote.textContent = "F0 follows the first virtual axis; each later frame follows the next axis. The final frame follows the last joint.";
+    const pairList = document.createElement("ul");
+    for (const pair of assignment.pairs) {
+      const pairItem = document.createElement("li");
+      pairItem.textContent = `${pair.from} → ${pair.to}: ${pair.case}, separation ${pair.separation.toPrecision(5)} m`;
+      pairList.append(pairItem);
+    }
+    const frameList = document.createElement("ol");
+    const vector = (values) => values.map((value) => value.toPrecision(5)).join(", ");
+    for (const frame of assignment.frames) {
+      const frameItem = document.createElement("li");
+      frameItem.textContent = `F${frame.index}: origin (${vector(frame.origin)}), X (${vector(frame.x)}), Y (${vector(frame.y)}), Z (${vector(frame.z)})`;
+      frameList.append(frameItem);
+    }
+    const toolNote = document.createElement("p");
+    toolNote.className = "body-path";
+    toolNote.textContent = `Fixed tool offset from final frame: (${vector(assignment.tool_transform.slice(0, 3).map((row) => row[3]))}) m`;
+    frameDetails.append(frameHeading, frameNote, pairList, frameList, toolNote);
+    item.append(frameDetails);
     chains.append(item);
   }
   panel.hidden = false;
