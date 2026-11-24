@@ -20,4 +20,5 @@ dt { font-weight: 600; }
 dd { margin: 0; }
 .columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
 ul { padding-left: 1.2rem; line-height: 1.7; }
+.body-path { display: block; color: #566374; }
 code { font-size: 0.95em; }

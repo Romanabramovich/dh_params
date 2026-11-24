@@ -25,6 +25,7 @@ function renderSummary(summary) {
     ["File", summary.filename],
     ["Bodies", summary.body_count],
     ["Joints", summary.joint_count],
+    ["Chains", summary.chains.length],
     ["Equality constraints", summary.equality_count],
     ["Position coordinates", summary.qpos_size],
   ]) {
@@ -49,6 +50,21 @@ function renderSummary(summary) {
     const item = document.createElement("li");
     item.textContent = `${joint.name} · ${joint.type} · body ${joint.body_id}`;
     joints.append(item);
+  }
+
+  const chains = document.getElementById("chain-list");
+  chains.replaceChildren();
+  document.getElementById("chain-empty").hidden = summary.chains.length !== 0;
+  for (const chain of summary.chains) {
+    const item = document.createElement("li");
+    const title = document.createElement("strong");
+    title.textContent = `To ${chain.name}: `;
+    item.append(title, document.createTextNode(chain.joint_names.join(" → ")));
+    const bodyPath = document.createElement("small");
+    bodyPath.className = "body-path";
+    bodyPath.textContent = `Body path: ${chain.body_names.join(" → ")}`;
+    item.append(bodyPath);
+    chains.append(item);
   }
   panel.hidden = false;
   defaultCamera = summary.camera;
