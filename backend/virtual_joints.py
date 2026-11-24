@@ -1,6 +1,7 @@
 """Map MuJoCo joints to ordered one-degree-of-freedom virtual joints."""
 
 import math
+from dataclasses import dataclass
 
 import mujoco
 import numpy as np
@@ -117,44 +118,69 @@ def compose_virtual_motion(rows: list[dict]) -> np.ndarray:
     """Compose one source joint's virtual rows in their listed order."""
     result = np.eye(4)
     for row in rows:
-        axis = np.asarray(row["axis"], dtype=np.float64)
-        value = row["value"]
-        if row["kind"] == "prismatic":
-            result = result @ _translation(axis * value)
-        else:
-            skew = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
-            rotation = np.eye(3) + math.sin(value) * skew + (1 - math.cos(value)) * (skew @ skew)
-            motion = np.eye(4)
-            motion[:3, :3] = rotation
-            result = result @ motion
+        result = result @ virtual_row_transform(row)
     return result
 
 
-def reconstruct_chain_tip(model: mujoco.MjModel, chain: dict, qpos) -> np.ndarray:
-    """Rebuild a chain tip pose from virtual joints and compiled body offsets."""
+def virtual_row_transform(row: dict) -> np.ndarray:
+    axis = np.asarray(row["axis"], dtype=np.float64)
+    value = row["value"]
+    if row["kind"] == "prismatic":
+        return _translation(axis * value)
+    skew = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+    rotation = np.eye(3) + math.sin(value) * skew + (1 - math.cos(value)) * (skew @ skew)
+    motion = np.eye(4)
+    motion[:3, :3] = rotation
+    return motion
+
+
+@dataclass
+class VirtualTrace:
+    rows: list[dict]
+    axis_points: list[np.ndarray]
+    axis_directions: list[np.ndarray]
+    prefix_transforms: list[np.ndarray]
+    tip_transform: np.ndarray
+
+
+def trace_virtual_chain(model: mujoco.MjModel, chain: dict, qpos) -> VirtualTrace:
+    """Track virtual axes and their moving prefixes through the body tree."""
     rows, _ = virtualize_chain(model, chain, qpos)
     rows_by_joint = {}
     for row in rows:
         rows_by_joint.setdefault(row["source_joint_id"], []).append(row)
 
     transform = np.eye(4)
+    axis_points = []
+    axis_directions = []
+    prefixes = []
     for body_id in chain["body_ids"][1:]:
         start = int(model.body_jntadr[body_id])
         count = int(model.body_jntnum[body_id])
         body_joint_ids = range(start, start + count)
         if count and int(model.jnt_type[start]) == int(mujoco.mjtJoint.mjJNT_FREE):
-            transform = compose_virtual_motion(rows_by_joint[start])
-            continue
-
-        body_offset = _translation(model.body_pos[body_id])
-        body_offset[:3, :3] = _quaternion_rotation(model.body_quat[body_id])
-        transform = transform @ body_offset
+            transform = np.eye(4)
+        else:
+            body_offset = _translation(model.body_pos[body_id])
+            body_offset[:3, :3] = _quaternion_rotation(model.body_quat[body_id])
+            transform = transform @ body_offset
         for joint_id in body_joint_ids:
-            motion = compose_virtual_motion(rows_by_joint[joint_id])
             joint_type = int(model.jnt_type[joint_id])
             if joint_type in (int(mujoco.mjtJoint.mjJNT_HINGE), int(mujoco.mjtJoint.mjJNT_BALL)):
                 anchor = model.jnt_pos[joint_id]
-                transform = transform @ _translation(anchor) @ motion @ _translation(-anchor)
-            else:
-                transform = transform @ motion
-    return transform
+                transform = transform @ _translation(anchor)
+            for row in rows_by_joint[joint_id]:
+                if not prefixes:
+                    prefixes.append(transform.copy())
+                axis_points.append(transform[:3, 3].copy())
+                axis_directions.append(transform[:3, :3] @ np.asarray(row["axis"], dtype=np.float64))
+                transform = transform @ virtual_row_transform(row)
+                prefixes.append(transform.copy())
+            if joint_type in (int(mujoco.mjtJoint.mjJNT_HINGE), int(mujoco.mjtJoint.mjJNT_BALL)):
+                transform = transform @ _translation(-anchor)
+    return VirtualTrace(rows, axis_points, axis_directions, prefixes, transform)
+
+
+def reconstruct_chain_tip(model: mujoco.MjModel, chain: dict, qpos) -> np.ndarray:
+    """Rebuild a chain tip pose from virtual joints and compiled body offsets."""
+    return trace_virtual_chain(model, chain, qpos).tip_transform

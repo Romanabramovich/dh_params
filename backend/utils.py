@@ -1,8 +1,10 @@
-
 import numpy as np
 
 
 def normalize(vector, epsilon=1e-12):
+    vector = np.asarray(vector, dtype=np.float64)
+    if vector.shape != (3,) or not np.all(np.isfinite(vector)):
+        raise ValueError("Expected a finite 3D vector")
     normal = np.linalg.norm(vector)
     if normal < epsilon:
         raise ValueError("Cannot normalize zero vector")
@@ -14,6 +16,7 @@ def perpendicular(v, preferred=None):
     v = normalize(v)
 
     if preferred is not None:
+        preferred = np.asarray(preferred, dtype=np.float64)
         x = preferred - np.dot(preferred, v) * v
         if np.linalg.norm(x) > 1e-9:
             return normalize(x)
@@ -36,7 +39,11 @@ def assign_dh_pair(
 
     Inputs are expressed in the same reference frame.
     """
-    p1, p2 = np.asarray(p1), np.asarray(p2)
+    p1, p2 = np.asarray(p1, dtype=np.float64), np.asarray(p2, dtype=np.float64)
+    if p1.shape != (3,) or p2.shape != (3,) or not np.all(np.isfinite(p1)) or not np.all(np.isfinite(p2)):
+        raise ValueError("Axis points must be finite 3D vectors")
+    if angular_tol <= 0 or distance_tol <= 0:
+        raise ValueError("Axis tolerances must be positive")
     u, v = normalize(z1), normalize(z2)
 
     w = p2 - p1
@@ -44,19 +51,16 @@ def assign_dh_pair(
     cross = np.cross(u, v)
 
     # Parallel or collinear
-    if np.linalg.norm(cross) < angular_tol:
-
-        reference = (
-            p1 if previous_origin is None
-            else previous_origin
-        )
-
-        # Closest point on axis 2 to reference
-        c2 = p2 + np.dot(reference - p2, v) * v
-
-        # Difference perpendicular to the common axis
-        delta = c2 - reference
-        delta = delta - np.dot(delta, v) * v
+    cross_norm = np.linalg.norm(cross)
+    if cross_norm < angular_tol:
+        reference = p1 if previous_origin is None else np.asarray(previous_origin, dtype=np.float64)
+        if reference.shape != (3,) or not np.all(np.isfinite(reference)):
+            raise ValueError("Previous origin must be a finite 3D vector")
+        # The previous frame origin need not lie on axis 1. Project it there
+        # before measuring the separation between the two axes.
+        c1 = p1 + np.dot(reference - p1, u) * u
+        c2 = p2 + np.dot(c1 - p2, v) * v
+        delta = c2 - c1
 
         if np.linalg.norm(delta) < distance_tol:
             case = "collinear"
@@ -68,7 +72,7 @@ def assign_dh_pair(
     else:
         A = np.dot(u, w)
         B = np.dot(v, w)
-        denom = 1.0 - b * b
+        denom = cross_norm * cross_norm
 
         s = (A - b * B) / denom
         t = (b * A - B) / denom
@@ -101,5 +105,9 @@ def assign_dh_pair(
         "origin": c2,
         "x": x,
         "y": y,
-        "z": z
+        "z": z,
+        "foot_on_first": c1,
+        "foot_on_second": c2,
+        "distance": float(np.linalg.norm(delta)),
+        "angle_sine": float(cross_norm),
     }

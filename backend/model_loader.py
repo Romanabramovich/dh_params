@@ -6,6 +6,7 @@ from xml.etree import ElementTree
 import mujoco
 
 from backend.chains import discover_chains
+from backend.frames import FrameAssignment, assign_chain_frames
 from backend.virtual_joints import virtualize_chain
 
 
@@ -32,6 +33,7 @@ class LoadedModel:
     model: mujoco.MjModel
     data: mujoco.MjData
     chains: list[dict]
+    frame_assignments: dict[str, FrameAssignment]
 
 
 def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
@@ -67,8 +69,10 @@ def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
         raise ModelLoadError("compile_error", f"MuJoCo could not compile this MJCF: {exc}.") from exc
 
     chains = discover_chains(model)
+    frame_assignments = {}
     for chain in chains:
         chain["virtual_joints"], chain["virtual_warnings"] = virtualize_chain(model, chain, data.qpos)
+        frame_assignments[chain["id"]] = assign_chain_frames(model, data, chain)
 
     return LoadedModel(
         filename=filename,
@@ -76,6 +80,7 @@ def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
         model=model,
         data=data,
         chains=chains,
+        frame_assignments=frame_assignments,
     )
 
 
@@ -113,5 +118,8 @@ def model_summary(loaded: LoadedModel) -> dict:
         "reference_qpos": loaded.data.qpos.tolist(),
         "bodies": bodies,
         "joints": joints,
-        "chains": loaded.chains,
+        "chains": [
+            {**chain, "dh_frames": loaded.frame_assignments[chain["id"]].as_dict()}
+            for chain in loaded.chains
+        ],
     }
