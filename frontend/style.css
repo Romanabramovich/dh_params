@@ -21,4 +21,8 @@ dd { margin: 0; }
 .columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
 ul { padding-left: 1.2rem; line-height: 1.7; }
 .body-path { display: block; color: #566374; }
+details { margin: 0.2rem 0 0.65rem; }
+details summary { cursor: pointer; }
+details ol { margin: 0.3rem 0; }
+.virtual-warning { color: #9a5d00; }
 code { font-size: 0.95em; }

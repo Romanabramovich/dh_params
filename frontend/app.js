@@ -64,6 +64,27 @@ function renderSummary(summary) {
     bodyPath.className = "body-path";
     bodyPath.textContent = `Body path: ${chain.body_names.join(" → ")}`;
     item.append(bodyPath);
+
+    const details = document.createElement("details");
+    const heading = document.createElement("summary");
+    heading.textContent = `Virtual joints (${chain.virtual_joints.length})`;
+    const virtualList = document.createElement("ol");
+    for (const row of chain.virtual_joints) {
+      const virtualItem = document.createElement("li");
+      const qpos = row.qpos_range[1] - row.qpos_range[0] === 1
+        ? `qpos[${row.qpos_range[0]}]`
+        : `qpos[${row.qpos_range[0]}:${row.qpos_range[1]}]`;
+      virtualItem.textContent = `${row.name} · ${row.kind} · ${row.value.toFixed(3)} ${row.unit} · axis (${row.axis.join(", ")}) · ${qpos}`;
+      virtualList.append(virtualItem);
+    }
+    details.append(heading, virtualList);
+    for (const warning of chain.virtual_warnings) {
+      const note = document.createElement("p");
+      note.className = "virtual-warning";
+      note.textContent = warning;
+      details.append(note);
+    }
+    item.append(details);
     chains.append(item);
   }
   panel.hidden = false;
