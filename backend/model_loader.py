@@ -5,6 +5,8 @@ from xml.etree import ElementTree
 
 import mujoco
 
+from backend.chains import discover_chains
+
 
 JOINT_TYPES = {
     int(mujoco.mjtJoint.mjJNT_FREE): "free",
@@ -28,6 +30,7 @@ class LoadedModel:
     model_name: str
     model: mujoco.MjModel
     data: mujoco.MjData
+    chains: list[dict]
 
 
 def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
@@ -62,7 +65,13 @@ def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
     except (mujoco.FatalError, ValueError) as exc:
         raise ModelLoadError("compile_error", f"MuJoCo could not compile this MJCF: {exc}.") from exc
 
-    return LoadedModel(filename=filename, model_name=root.get("model", "unnamed model"), model=model, data=data)
+    return LoadedModel(
+        filename=filename,
+        model_name=root.get("model", "unnamed model"),
+        model=model,
+        data=data,
+        chains=discover_chains(model),
+    )
 
 
 def model_summary(loaded: LoadedModel) -> dict:
@@ -99,4 +108,5 @@ def model_summary(loaded: LoadedModel) -> dict:
         "reference_qpos": loaded.data.qpos.tolist(),
         "bodies": bodies,
         "joints": joints,
+        "chains": loaded.chains,
     }
