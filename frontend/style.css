@@ -8,7 +8,13 @@ h1 { margin-bottom: 0.25rem; }
 #file-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 #status { min-height: 1.5rem; }
 #status.error { color: #a11a22; }
-#model-panel { padding: 1rem 1.5rem; border: 1px solid #d5dce5; border-radius: 12px; background: white; }
+#model-panel, #view-panel { margin-bottom: 1rem; padding: 1rem 1.5rem; border: 1px solid #d5dce5; border-radius: 12px; background: white; }
+.view-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.view-header h2 { margin: 0.25rem 0 1rem; }
+#reset-camera { padding: 0.4rem 0.65rem; cursor: pointer; }
+#model-canvas { display: block; width: 100%; height: auto; border-radius: 6px; background: #19202b; cursor: grab; touch-action: none; }
+#model-canvas:active { cursor: grabbing; }
+.view-hint { margin-bottom: 0; color: #566374; font-size: 0.9rem; }
 dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; }
 dt { font-weight: 600; }
 dd { margin: 0; }

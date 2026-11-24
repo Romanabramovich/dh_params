@@ -10,13 +10,21 @@
   <body>
     <main>
       <h1>MJCF DH visualizer</h1>
-      <p>Drop a standalone MJCF file to inspect its compiled model.</p>
+      <p>Drop a standalone MJCF file to inspect its compiled model and 3D view.</p>
       <section id="dropzone" class="dropzone" aria-label="MJCF file drop area">
         <p>Drop an <code>.xml</code> or <code>.mjcf</code> file here</p>
         <label class="button" for="file-input">Choose a file</label>
         <input id="file-input" type="file" accept=".xml,.mjcf">
       </section>
       <p id="status" role="status" aria-live="polite">No model loaded.</p>
+      <section id="view-panel" hidden>
+        <div class="view-header">
+          <h2>Model view</h2>
+          <button id="reset-camera" type="button">Reset view</button>
+        </div>
+        <canvas id="model-canvas" width="800" height="600" role="img" aria-label="Rendered MJCF model"></canvas>
+        <p class="view-hint">Drag to orbit · Scroll to zoom</p>
+      </section>
       <section id="model-panel" hidden>
         <h2 id="model-title"></h2>
         <dl id="summary-stats"></dl>

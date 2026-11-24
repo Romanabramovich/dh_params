@@ -2,6 +2,15 @@ const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("file-input");
 const status = document.getElementById("status");
 const panel = document.getElementById("model-panel");
+const viewPanel = document.getElementById("view-panel");
+const modelCanvas = document.getElementById("model-canvas");
+const canvasContext = modelCanvas.getContext("2d", { alpha: false });
+let defaultCamera = null;
+let camera = null;
+let rendering = false;
+let needsFrame = false;
+let modelGeneration = 0;
+let dragPosition = null;
 
 function setStatus(message, isError = false) {
   status.textContent = message;
@@ -42,6 +51,49 @@ function renderSummary(summary) {
     joints.append(item);
   }
   panel.hidden = false;
+  defaultCamera = summary.camera;
+  camera = { ...defaultCamera, lookat: [...defaultCamera.lookat] };
+  modelGeneration += 1;
+  viewPanel.hidden = false;
+  requestFrame();
+}
+
+function requestFrame() {
+  needsFrame = true;
+  if (!rendering) void renderFrames();
+}
+
+async function renderFrames() {
+  rendering = true;
+  while (needsFrame && camera) {
+    needsFrame = false;
+    const generation = modelGeneration;
+    const params = new URLSearchParams({
+      azimuth: String(camera.azimuth),
+      elevation: String(camera.elevation),
+      distance: String(camera.distance),
+    });
+    try {
+      const response = await fetch(`/api/frame?${params}`);
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error?.message || "Could not render this model.");
+      }
+      const bitmap = await createImageBitmap(await response.blob());
+      // Draw in a paint frame so continuous input cannot replace an image
+      // before the browser has decoded and displayed it.
+      await new Promise((resolve) => requestAnimationFrame(() => {
+        if (generation === modelGeneration) {
+          canvasContext.drawImage(bitmap, 0, 0, modelCanvas.width, modelCanvas.height);
+        }
+        bitmap.close();
+        resolve();
+      }));
+    } catch (error) {
+      if (generation === modelGeneration) setStatus(error.message, true);
+    }
+  }
+  rendering = false;
 }
 
 async function upload(file) {
@@ -63,6 +115,34 @@ async function upload(file) {
 }
 
 fileInput.addEventListener("change", () => upload(fileInput.files[0]));
+modelCanvas.addEventListener("pointerdown", (event) => {
+  if (!camera) return;
+  dragPosition = { x: event.clientX, y: event.clientY };
+  modelCanvas.setPointerCapture(event.pointerId);
+});
+modelCanvas.addEventListener("pointermove", (event) => {
+  if (!dragPosition || !camera) return;
+  camera.azimuth += (event.clientX - dragPosition.x) * 0.4;
+  camera.elevation = Math.max(-89, Math.min(89, camera.elevation - (event.clientY - dragPosition.y) * 0.4));
+  dragPosition = { x: event.clientX, y: event.clientY };
+  requestFrame();
+});
+for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  modelCanvas.addEventListener(eventName, () => { dragPosition = null; });
+}
+modelCanvas.addEventListener("wheel", (event) => {
+  if (!camera) return;
+  event.preventDefault();
+  const minimum = Math.max(0.01, defaultCamera.distance * 0.05);
+  const maximum = Math.max(minimum, defaultCamera.distance * 20);
+  camera.distance = Math.max(minimum, Math.min(maximum, camera.distance * Math.exp(event.deltaY * 0.001)));
+  requestFrame();
+}, { passive: false });
+document.getElementById("reset-camera").addEventListener("click", () => {
+  if (!defaultCamera) return;
+  camera = { ...defaultCamera, lookat: [...defaultCamera.lookat] };
+  requestFrame();
+});
 dropzone.addEventListener("dragover", (event) => {
   event.preventDefault();
   dropzone.classList.add("dragging");
