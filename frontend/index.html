@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MJCF DH visualizer</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>MJCF DH visualizer</h1>
+      <p>Drop a standalone MJCF file to inspect its compiled model.</p>
+      <section id="dropzone" class="dropzone" aria-label="MJCF file drop area">
+        <p>Drop an <code>.xml</code> or <code>.mjcf</code> file here</p>
+        <label class="button" for="file-input">Choose a file</label>
+        <input id="file-input" type="file" accept=".xml,.mjcf">
+      </section>
+      <p id="status" role="status" aria-live="polite">No model loaded.</p>
+      <section id="model-panel" hidden>
+        <h2 id="model-title"></h2>
+        <dl id="summary-stats"></dl>
+        <div class="columns">
+          <section><h3>Bodies</h3><ul id="body-list"></ul></section>
+          <section><h3>Joints</h3><ul id="joint-list"></ul></section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
