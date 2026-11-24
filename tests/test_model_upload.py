@@ -13,8 +13,11 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 class ModelUploadTests(unittest.TestCase):
     def setUp(self):
-        app.state.loaded_model = None
         self.client = TestClient(app)
+        self.client.__enter__()
+
+    def tearDown(self):
+        self.client.__exit__(None, None, None)
 
     def upload_fixture(self, name):
         path = FIXTURES / name
@@ -35,6 +38,7 @@ class ModelUploadTests(unittest.TestCase):
                 self.assertEqual((summary["body_count"], summary["joint_count"], summary["qpos_size"], summary["equality_count"]), (nbody, njnt, nq, neq))
                 self.assertEqual(summary["joint_counts"], counts)
                 self.assertEqual(summary["reference_qpos"], app.state.loaded_model.model.qpos0.tolist())
+                self.assertGreater(summary["camera"]["distance"], 0)
 
     def test_intermediate_keeps_fixed_bodies_branching_and_same_body_joints(self):
         summary = self.upload_fixture("intermediate.xml").json()
@@ -101,7 +105,9 @@ class ModelUploadTests(unittest.TestCase):
 
     def test_page_and_assets_are_served(self):
         self.assertIn("MJCF DH visualizer", self.client.get("/").text)
-        self.assertEqual(self.client.get("/app.js").status_code, 200)
+        script = self.client.get("/app.js")
+        self.assertEqual(script.status_code, 200)
+        self.assertEqual(script.headers["cache-control"], "no-store")
         self.assertEqual(self.client.get("/style.css").status_code, 200)
 
 
