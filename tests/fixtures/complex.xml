@@ -1,0 +1,34 @@
+<mujoco model="complex_floating_loop">
+  <compiler fusestatic="false"/>
+  <worldbody>
+    <body name="floating_base" pos="0 0 0.5">
+      <freejoint name="base_free"/>
+      <geom type="box" size="0.12 0.12 0.06" mass="2" rgba="0.5 0.5 0.8 1"/>
+      <body name="ball_mount" pos="0 0 0.15">
+        <joint name="ball" type="ball"/>
+        <geom type="sphere" size="0.08" mass="0.5"/>
+        <body name="branch_a" pos="0.2 0 0">
+          <joint name="axis_a" type="hinge" axis="0 0 1"/>
+          <geom type="capsule" fromto="0 0 0 0.2 0 0" size="0.03" mass="0.3"/>
+          <body name="tip_a" pos="0.2 0 0">
+            <joint name="axis_a2" type="hinge" axis="0 0 1"/>
+            <geom type="sphere" size="0.04" mass="0.1"/>
+            <site name="end_a" size="0.01"/>
+          </body>
+        </body>
+        <body name="branch_b" pos="0 0.2 0">
+          <joint name="axis_b" type="hinge" axis="0.00000001 0 1"/>
+          <geom type="capsule" fromto="0 0 0 0 0.2 0" size="0.03" mass="0.3"/>
+          <body name="tip_b" pos="0 0.2 0">
+            <joint name="axis_b2" type="hinge" axis="0 1 0"/>
+            <geom type="sphere" size="0.04" mass="0.1"/>
+            <site name="end_b" size="0.01"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <equality>
+    <connect name="closure" body1="tip_a" body2="tip_b" anchor="0.2 0.2 0.65"/>
+  </equality>
+</mujoco>

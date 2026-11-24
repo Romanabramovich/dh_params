@@ -1,0 +1,14 @@
+<mujoco model="basic_serial">
+  <compiler fusestatic="false"/>
+  <worldbody>
+    <body name="base" pos="0 0 0.2">
+      <joint name="shoulder" type="hinge" axis="0 0 1"/>
+      <geom type="box" size="0.08 0.08 0.2" mass="1" rgba="0.3 0.5 0.8 1"/>
+      <body name="arm" pos="0.25 0 0">
+        <joint name="extension" type="slide" axis="1 0 0"/>
+        <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.04" mass="0.5"/>
+        <site name="tip" pos="0.4 0 0" size="0.01"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
