@@ -1,4 +1,5 @@
 fastapi==0.165.0
-mujoco-core==4.0.1
+mujoco-core[rendering]==4.0.1
+pillow==13.0.0
 python-multipart==0.0.34
 uvicorn==0.54.0
