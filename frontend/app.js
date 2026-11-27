@@ -17,6 +17,14 @@ function setStatus(message, isError = false) {
   status.classList.toggle("error", isError);
 }
 
+function formatParameter(value) {
+  return Math.abs(value) < 1e-10 ? "0" : Number(value).toPrecision(5);
+}
+
+function formatError(value) {
+  return Number(value).toExponential(2);
+}
+
 function renderSummary(summary) {
   document.getElementById("model-title").textContent = summary.model_name;
   const stats = document.getElementById("summary-stats");
@@ -111,6 +119,52 @@ function renderSummary(summary) {
     toolNote.textContent = `Fixed tool offset from final frame: (${vector(assignment.tool_transform.slice(0, 3).map((row) => row[3]))}) m`;
     frameDetails.append(frameHeading, frameNote, pairList, frameList, toolNote);
     item.append(frameDetails);
+
+    const table = chain.dh_table;
+    const validation = table.validation;
+    const tableDetails = document.createElement("details");
+    tableDetails.className = "dh-details";
+    tableDetails.open = true;
+    const tableHeading = document.createElement("summary");
+    tableHeading.textContent = `Standard DH table (${table.rows.length} rows) · ${validation.status}`;
+    tableHeading.className = validation.status === "verified" ? "validation-ok" : "validation-error";
+    const conventionNote = document.createElement("p");
+    conventionNote.className = "body-path";
+    conventionNote.textContent = "At the reference pose. Revolute rows use θ = θ₀ + (v − v₀); prismatic rows use d = d₀ + (v − v₀), where v is the virtual joint value shown above.";
+    const tableWrap = document.createElement("div");
+    tableWrap.className = "dh-table-wrap";
+    const dhTable = document.createElement("table");
+    dhTable.className = "dh-table";
+    const thead = document.createElement("thead");
+    const header = document.createElement("tr");
+    for (const label of ["Joint", "Variable", "θ₀ (rad)", "d₀ (m)", "a (m)", "α (rad)"]) {
+      const cell = document.createElement("th");
+      cell.scope = "col";
+      cell.textContent = label;
+      header.append(cell);
+    }
+    thead.append(header);
+    const tbody = document.createElement("tbody");
+    for (const row of table.rows) {
+      const tr = document.createElement("tr");
+      for (const value of [row.name, row.variable === "theta" ? "θ" : "d", row.theta_offset, row.d_offset, row.a, row.alpha]) {
+        const cell = document.createElement("td");
+        cell.textContent = typeof value === "number" ? formatParameter(value) : value;
+        tr.append(cell);
+      }
+      tbody.append(tr);
+    }
+    dhTable.append(thead, tbody);
+    tableWrap.append(dhTable);
+    const validationNote = document.createElement("p");
+    validationNote.className = validation.status === "verified" ? "validation-ok" : "validation-error";
+    validationNote.textContent = `${validation.status === "verified" ? "Verified" : "Validation failed"} against MuJoCo tree FK at ${validation.sample_count} poses · max position error ${formatError(validation.max_fk_position_error_m)} m · max orientation error ${formatError(validation.max_fk_orientation_error_rad)} rad.`;
+    const constraintNote = document.createElement("p");
+    constraintNote.className = "body-path";
+    constraintNote.textContent = "Equality constraints are outside this open-chain DH comparison.";
+    tableDetails.append(tableHeading, conventionNote, tableWrap, validationNote);
+    if (summary.equality_count > 0) tableDetails.append(constraintNote);
+    item.append(tableDetails);
     chains.append(item);
   }
   panel.hidden = false;

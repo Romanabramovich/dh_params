@@ -27,4 +27,10 @@ details ol { margin: 0.3rem 0; }
 details ul { margin: 0.3rem 0; }
 details li { overflow-wrap: anywhere; }
 .virtual-warning { color: #9a5d00; }
+.dh-table-wrap { overflow-x: auto; }
+.dh-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.dh-table th, .dh-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid #d5dce5; text-align: left; white-space: nowrap; }
+.dh-table th { background: #f3f6fa; }
+.validation-ok { color: #17653d; }
+.validation-error { color: #a11a22; }
 code { font-size: 0.95em; }
