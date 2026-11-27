@@ -6,6 +6,7 @@ from xml.etree import ElementTree
 import mujoco
 
 from backend.chains import discover_chains
+from backend.dh import DhTable, build_validated_tables
 from backend.frames import FrameAssignment, assign_chain_frames
 from backend.virtual_joints import virtualize_chain
 
@@ -34,6 +35,7 @@ class LoadedModel:
     data: mujoco.MjData
     chains: list[dict]
     frame_assignments: dict[str, FrameAssignment]
+    dh_tables: dict[str, DhTable]
 
 
 def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
@@ -73,6 +75,7 @@ def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
     for chain in chains:
         chain["virtual_joints"], chain["virtual_warnings"] = virtualize_chain(model, chain, data.qpos)
         frame_assignments[chain["id"]] = assign_chain_frames(model, data, chain)
+    dh_tables = build_validated_tables(model, chains, frame_assignments)
 
     return LoadedModel(
         filename=filename,
@@ -81,6 +84,7 @@ def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
         data=data,
         chains=chains,
         frame_assignments=frame_assignments,
+        dh_tables=dh_tables,
     )
 
 
@@ -119,7 +123,11 @@ def model_summary(loaded: LoadedModel) -> dict:
         "bodies": bodies,
         "joints": joints,
         "chains": [
-            {**chain, "dh_frames": loaded.frame_assignments[chain["id"]].as_dict()}
+            {
+                **chain,
+                "dh_frames": loaded.frame_assignments[chain["id"]].as_dict(),
+                "dh_table": loaded.dh_tables[chain["id"]].as_dict(),
+            }
             for chain in loaded.chains
         ],
     }
