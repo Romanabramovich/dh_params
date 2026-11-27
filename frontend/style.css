@@ -11,6 +11,8 @@ h1 { margin-bottom: 0.25rem; }
 #model-panel, #view-panel { margin-bottom: 1rem; padding: 1rem 1.5rem; border: 1px solid #d5dce5; border-radius: 12px; background: white; }
 .view-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .view-header h2 { margin: 0.25rem 0 1rem; }
+.view-header label { margin-left: auto; }
+#chain-select { max-width: 13rem; padding: 0.3rem; }
 #reset-camera { padding: 0.4rem 0.65rem; cursor: pointer; }
 #model-canvas { display: block; width: 100%; height: auto; border-radius: 6px; background: #19202b; cursor: grab; touch-action: none; }
 #model-canvas:active { cursor: grabbing; }
@@ -21,6 +23,9 @@ dd { margin: 0; }
 .columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
 ul { padding-left: 1.2rem; line-height: 1.7; }
 .body-path { display: block; color: #566374; }
+.pose-controls { display: flex; align-items: stretch; gap: 0.6rem; margin-top: 0.3rem; }
+#pose-input { flex: 1; min-width: 0; padding: 0.6rem; font: 0.9rem ui-monospace, monospace; }
+#apply-pose { padding: 0.5rem 0.8rem; cursor: pointer; }
 details { margin: 0.2rem 0 0.65rem; }
 details summary { cursor: pointer; }
 details ol { margin: 0.3rem 0; }
@@ -34,3 +39,8 @@ details li { overflow-wrap: anywhere; }
 .validation-ok { color: #17653d; }
 .validation-error { color: #a11a22; }
 code { font-size: 0.95em; }
+@media (max-width: 600px) {
+  .view-header { flex-wrap: wrap; }
+  .view-header label { margin-left: 0; }
+  .pose-controls { flex-direction: column; }
+}

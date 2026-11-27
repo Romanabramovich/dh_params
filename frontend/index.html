@@ -20,14 +20,28 @@
       <section id="view-panel" hidden>
         <div class="view-header">
           <h2>Model view</h2>
+          <label for="chain-select">Overlay chain <select id="chain-select"></select></label>
           <button id="reset-camera" type="button">Reset view</button>
         </div>
         <canvas id="model-canvas" width="800" height="600" role="img" aria-label="Rendered MJCF model"></canvas>
-        <p class="view-hint">Drag to orbit · Scroll to zoom</p>
+        <p class="view-hint">Drag to orbit · Scroll to zoom · Red, green, and blue lines show DH frame axes</p>
       </section>
       <section id="model-panel" hidden>
         <h2 id="model-title"></h2>
         <dl id="summary-stats"></dl>
+        <section>
+          <h3>Pose <small id="pose-version"></small></h3>
+          <label for="pose-input">Full qpos vector (JSON)</label>
+          <div class="pose-controls">
+            <textarea id="pose-input" rows="3" spellcheck="false"></textarea>
+            <button id="apply-pose" type="button">Apply pose</button>
+          </div>
+          <p class="body-path">Enter all position coordinates in model order. Free and ball joint quaternions are normalized when applied.</p>
+        </section>
+        <section id="constraint-panel" hidden>
+          <h3>Equality constraints</h3>
+          <ul id="constraint-list"></ul>
+        </section>
         <section>
           <h3>Kinematic chains</h3>
           <ul id="chain-list"></ul>
