@@ -1,6 +1,6 @@
 """Compile one self-contained MJCF file and expose its compiled topology."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from xml.etree import ElementTree
 
 import mujoco
@@ -8,6 +8,7 @@ import mujoco
 from backend.chains import discover_chains
 from backend.dh import DhTable, build_validated_tables
 from backend.frames import FrameAssignment, assign_chain_frames
+from backend.pose import constraint_diagnostics
 from backend.virtual_joints import virtualize_chain
 
 
@@ -36,6 +37,9 @@ class LoadedModel:
     chains: list[dict]
     frame_assignments: dict[str, FrameAssignment]
     dh_tables: dict[str, DhTable]
+    pose_version: int = 0
+    pose_frames: dict = field(default_factory=dict)
+    constraints: list[dict] = field(default_factory=list)
 
 
 def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
@@ -85,6 +89,7 @@ def compile_mjcf(contents: bytes, filename: str) -> LoadedModel:
         chains=chains,
         frame_assignments=frame_assignments,
         dh_tables=dh_tables,
+        constraints=constraint_diagnostics(model, data),
     )
 
 
@@ -119,7 +124,10 @@ def model_summary(loaded: LoadedModel) -> dict:
         "equality_count": model.neq,
         "qpos_size": model.nq,
         "joint_counts": joint_counts,
-        "reference_qpos": loaded.data.qpos.tolist(),
+        "reference_qpos": model.qpos0.tolist(),
+        "qpos": loaded.data.qpos.tolist(),
+        "pose_version": loaded.pose_version,
+        "constraints": loaded.constraints,
         "bodies": bodies,
         "joints": joints,
         "chains": [

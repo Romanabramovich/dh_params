@@ -14,6 +14,7 @@ if sys.platform.startswith("linux"):
     os.environ.setdefault("MUJOCO_GL", "egl")
 
 from backend.model_loader import ModelLoadError, compile_mjcf, model_summary
+from backend.pose import PoseError, normalize_qpos, selected_chain
 from backend.rendering import RenderService, adjusted_camera, default_camera
 
 
@@ -80,11 +81,45 @@ async def upload_model(file: UploadFile = File(...)) -> JSONResponse:
     return JSONResponse(summary_with_camera(loaded))
 
 
+@app.get("/api/pose")
+async def current_pose(chain_id: str | None = None) -> JSONResponse:
+    loaded = app.state.loaded_model
+    if loaded is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "no_model", "message": "No MJCF model is loaded."}})
+    try:
+        snapshot = await app.state.render_service.snapshot(loaded, chain_id)
+    except PoseError as exc:
+        return JSONResponse(status_code=422, content={"error": {"code": "invalid_chain", "message": str(exc)}})
+    except RuntimeError as exc:
+        return JSONResponse(status_code=409, content={"error": {"code": "model_changed", "message": str(exc)}})
+    return JSONResponse(snapshot)
+
+
+@app.put("/api/pose")
+async def update_pose(payload: dict) -> JSONResponse:
+    loaded = app.state.loaded_model
+    if loaded is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "no_model", "message": "No MJCF model is loaded."}})
+    try:
+        chain_id = payload.get("chain_id")
+        if chain_id is not None and not isinstance(chain_id, str):
+            raise PoseError("chain_id must be a string.")
+        selected_chain(loaded.model, loaded.chains, chain_id)
+        qpos = normalize_qpos(loaded.model, payload.get("qpos"))
+        snapshot = await app.state.render_service.set_pose(loaded, qpos, chain_id)
+    except PoseError as exc:
+        return JSONResponse(status_code=422, content={"error": {"code": "invalid_pose", "message": str(exc)}})
+    except RuntimeError as exc:
+        return JSONResponse(status_code=409, content={"error": {"code": "model_changed", "message": str(exc)}})
+    return JSONResponse(snapshot)
+
+
 @app.get("/api/frame")
 async def frame(
     azimuth: float | None = None,
     elevation: float | None = None,
     distance: float | None = None,
+    chain_id: str | None = None,
 ) -> Response:
     loaded = app.state.loaded_model
     if loaded is None:
@@ -92,11 +127,14 @@ async def frame(
 
     try:
         camera = adjusted_camera(default_camera(loaded.model), azimuth, elevation, distance)
+        selected_chain(loaded.model, loaded.chains, chain_id)
+    except PoseError as exc:
+        return JSONResponse(status_code=422, content={"error": {"code": "invalid_chain", "message": str(exc)}})
     except ValueError as exc:
         return JSONResponse(status_code=422, content={"error": {"code": "invalid_camera", "message": str(exc)}})
 
     try:
-        jpeg = await app.state.render_service.render(camera)
+        jpeg, pose_version = await app.state.render_service.render(camera, chain_id)
     except Exception as exc:
         return JSONResponse(status_code=503, content={"error": {"code": "render_error", "message": f"MuJoCo could not render this model: {exc}"}})
-    return Response(jpeg, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+    return Response(jpeg, media_type="image/jpeg", headers={"Cache-Control": "no-store", "X-Pose-Version": str(pose_version)})
